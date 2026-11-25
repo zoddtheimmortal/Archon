@@ -435,12 +435,14 @@
     "packages/providers/src/community/copilot/event-bridge.test.ts": ["@archon/paths"],
     "packages/providers/src/community/copilot/provider-hardening.test.ts": [
       "@archon/paths",
-      "@github/copilot-sdk"
+      "@microsoft/copilot-sdk"
     ],
-    "packages/providers/src/community/copilot/provider-lazy-load.test.ts": ["@github/copilot-sdk"],
+    "packages/providers/src/community/copilot/provider-lazy-load.test.ts": [
+      "@microsoft/copilot-sdk"
+    ],
     "packages/providers/src/community/copilot/provider.test.ts": [
       "@archon/paths",
-      "@github/copilot-sdk"
+      "@microsoft/copilot-sdk"
     ],
     "packages/providers/src/community/opencode/provider.test.ts": [
       "@archon/paths",
@@ -463,7 +465,7 @@
     ],
     "packages/providers/src/native-credential-check.test.ts": [
       "@anthropic-ai/claude-agent-sdk",
-      "@github/copilot-sdk",
+      "@microsoft/copilot-sdk",
       "@opencode-ai/sdk"
     ],
     "packages/providers/src/shared/run-config.test.ts": ["@archon/paths"],
@@ -1016,12 +1018,13 @@
       "wrapRegisteredTool",
       "wrapRegisteredTools"
     ],
-    "@github/copilot-sdk": [
+    "@microsoft/copilot-sdk": [
       "AhpHost",
       "BuiltInTools",
       "Canvas",
       "CanvasError",
       "CopilotClient",
+      "CopilotDecisions",
       "CopilotRequestHandler",
       "CopilotSession",
       "CopilotWebSocketCloseStatus",
@@ -1031,16 +1034,23 @@
       "RuntimeConnection",
       "SYSTEM_MESSAGE_SECTIONS",
       "SessionFsSqliteTransactionFailure",
+      "SessionFsWriteFailure",
       "ToolSet",
+      "WORKFLOW_AGENT_OPTION_KEYS",
       "WorkflowResumeError",
       "approveAll",
       "convertMcpCallToolResult",
       "createAttributedPermissionResult",
+      "createAttributedResult",
       "createCanvas",
       "createSessionFsAdapter",
+      "decisionErrorData",
+      "decisionErrorKind",
       "defineTool",
       "defineWorkflow",
-      "isWorkflowRunTerminal"
+      "isWorkflowRunTerminal",
+      "parseTrajectoryJson",
+      "toSavedProviderConfiguration"
     ],
     "@octokit/auth-app": ["createOAuthUserAuth"],
     "@opencode-ai/sdk": [

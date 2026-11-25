@@ -1,15 +1,15 @@
 /**
- * CopilotProvider end-to-end test with a fully mocked @github/copilot-sdk.
+ * CopilotProvider end-to-end test with a fully mocked @microsoft/copilot-sdk.
  *
  * Covers: streaming chunks flow through the async generator, resume
  * fallback on missing session, abort wiring, unsupported-option log-warn,
  * missing-model throw, terminal result chunk carries sessionId + tokens.
  *
- * Runs in its own bun test invocation — mocks @github/copilot-sdk and
+ * Runs in its own bun test invocation — mocks @microsoft/copilot-sdk and
  * @archon/paths process-wide.
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { SessionConfig, SessionEvent } from '@github/copilot-sdk';
+import type { CreateSessionOptions, SessionEvent } from '@microsoft/copilot-sdk';
 
 import { createMockLogger } from '../../test/mocks/logger';
 
@@ -102,11 +102,23 @@ const resumeSessionSpy = mock((_id: string, _opts: unknown): Promise<FakeSession
   return Promise.resolve(nextResumeSessionResult);
 });
 
-let lastClientOpts: Record<string, unknown> | undefined;
+interface FakeRuntime {
+  kind: string;
+  path?: string;
+  env?: Record<string, string | undefined>;
+  workingDirectory?: string;
+  baseDirectory?: string;
+}
+interface FakeClientOpts {
+  mode?: string;
+  runtime?: FakeRuntime;
+  github?: { token?: string; useLoggedInUser?: boolean };
+}
+let lastClientOpts: FakeClientOpts | undefined;
 class FakeCopilotClient {
   createSession = createSessionSpy;
   resumeSession = resumeSessionSpy;
-  constructor(opts: Record<string, unknown>) {
+  constructor(opts: FakeClientOpts) {
     lastClientOpts = opts;
   }
 }
@@ -114,8 +126,13 @@ class FakeCopilotClient {
 // Capture the onPermissionRequest passed into createSession.
 const approveAllStub = mock(() => ({ kind: 'approved' }));
 
-mock.module('@github/copilot-sdk', () => ({
+const FakeRuntimeConnection = {
+  forSpawnedStdio: (opts: Record<string, unknown> = {}) => ({ kind: 'spawned-stdio', ...opts }),
+};
+
+mock.module('@microsoft/copilot-sdk', () => ({
   CopilotClient: FakeCopilotClient,
+  RuntimeConnection: FakeRuntimeConnection,
   approveAll: approveAllStub,
 }));
 
@@ -187,11 +204,11 @@ describe('CopilotProvider.sendQuery', () => {
     expect(createSessionSpy).toHaveBeenCalledTimes(1);
     const opts = createSessionSpy.mock.calls[0]![0] as {
       model: string;
-      streaming: boolean;
+      events?: { streaming?: boolean };
       workingDirectory: string;
     };
     expect(opts.model).toBe('gpt-5');
-    expect(opts.streaming).toBe(true);
+    expect(opts.events?.streaming).toBe(true);
     expect(opts.workingDirectory).toBe('/work/dir');
     expect(session.prompt).toBe('hello');
     expect(chunks.some(c => c && typeof c === 'object' && 'type' in c && c.type === 'result')).toBe(
@@ -215,8 +232,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
-    expect(opts.reasoningEffort).toBe('high');
+    const opts = createSessionSpy.mock.calls[0]![0] as { inference?: { reasoningEffort?: string } };
+    expect(opts.inference?.reasoningEffort).toBe('high');
   });
 
   test('workflow `effort: ultra` clamps to the SDK `max` rung', async () => {
@@ -234,8 +251,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
-    expect(opts.reasoningEffort).toBe('max');
+    const opts = createSessionSpy.mock.calls[0]![0] as { inference?: { reasoningEffort?: string } };
+    expect(opts.inference?.reasoningEffort).toBe('max');
   });
 
   // #2556: `minimal` is a rung on Archon's shared ladder that Copilot's SDK
@@ -257,8 +274,8 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as { reasoningEffort?: string };
-    expect(opts.reasoningEffort).toBe('low');
+    const opts = createSessionSpy.mock.calls[0]![0] as { inference?: { reasoningEffort?: string } };
+    expect(opts.inference?.reasoningEffort).toBe('low');
   });
 
   test.each([
@@ -311,7 +328,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
+    const opts = createSessionSpy.mock.calls[0]![0] as CreateSessionOptions;
     expect(opts.systemMessage).toEqual({ content: expected, mode: 'append' });
   });
 
@@ -330,7 +347,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    const opts = createSessionSpy.mock.calls[0]![0] as SessionConfig;
+    const opts = createSessionSpy.mock.calls[0]![0] as CreateSessionOptions;
     expect(opts.systemMessage).toEqual({ content: 'Be concise.', mode: 'append' });
   });
 
@@ -553,15 +570,14 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBeUndefined();
-    expect(lastClientOpts?.useLoggedInUser).toBe(true);
-    // copilot-sdk 1.0 rename guard: sessions must run in the request cwd via
-    // `workingDirectory` (was `cwd` pre-1.0 — a silent revert would strand
-    // sessions in the server's cwd).
-    expect(lastClientOpts?.workingDirectory).toBe('/w');
-    // Dev mode resolves no custom CLI binary → no stdio connection override
-    // (the SDK uses its bundled runtime).
-    expect(lastClientOpts?.connection).toBeUndefined();
+    expect(lastClientOpts?.github).toEqual({ useLoggedInUser: true });
+    expect(lastClientOpts?.mode).toBe('coding-agent');
+    // The runtime must be a spawned child in the request cwd: the SDK's
+    // default in-process runtime ignores workingDirectory and env.
+    expect(lastClientOpts?.runtime?.kind).toBe('spawned-stdio');
+    expect(lastClientOpts?.runtime?.workingDirectory).toBe('/w');
+    // Dev mode resolves no custom CLI binary → the SDK spawns its bundled runtime.
+    expect(lastClientOpts?.runtime?.path).toBeUndefined();
   });
 
   test("a run's identity in the request env reaches the Copilot runtime the agent's shell runs in", async () => {
@@ -582,11 +598,11 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.env).toMatchObject(identity);
-    expect(lastClientOpts?.baseDirectory).toBeUndefined();
+    expect(lastClientOpts?.runtime?.env).toMatchObject(identity);
+    expect(lastClientOpts?.runtime?.baseDirectory).toBeUndefined();
   });
 
-  test('configDir override → client baseDirectory (COPILOT_HOME), sdk-1.0 placement', async () => {
+  test('configDir override → runtime baseDirectory (COPILOT_HOME)', async () => {
     const session = makeFakeSession();
     nextCreateSessionResult = session;
 
@@ -601,7 +617,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.baseDirectory).toBe('/custom/copilot-home');
+    expect(lastClientOpts?.runtime?.baseDirectory).toBe('/custom/copilot-home');
   });
 
   test('COPILOT_GITHUB_TOKEN is always used (intent signal)', async () => {
@@ -625,8 +641,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBe('ghp_copilot');
-    expect(lastClientOpts?.useLoggedInUser).toBe(false);
+    expect(lastClientOpts?.github).toEqual({ token: 'ghp_copilot', useLoggedInUser: false });
   });
 
   test('useLoggedInUser:false opts into generic GH_TOKEN', async () => {
@@ -645,8 +660,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBe('ghp_testtoken');
-    expect(lastClientOpts?.useLoggedInUser).toBe(false);
+    expect(lastClientOpts?.github).toEqual({ token: 'ghp_testtoken', useLoggedInUser: false });
   });
 
   test('assistantConfig.useLoggedInUser=true overrides env token', async () => {
@@ -665,8 +679,7 @@ describe('CopilotProvider.sendQuery', () => {
     await first;
     await collect(gen);
 
-    expect(lastClientOpts?.gitHubToken).toBeUndefined();
-    expect(lastClientOpts?.useLoggedInUser).toBe(true);
+    expect(lastClientOpts?.github).toEqual({ useLoggedInUser: true });
   });
 
   test('a sendAndWait rejection ends the turn in a typed failure, then settled', async () => {

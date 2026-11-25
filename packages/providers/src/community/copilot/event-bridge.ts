@@ -1,5 +1,5 @@
 /**
- * Event bridge between @github/copilot-sdk's callback-based session.on() API
+ * Event bridge between @microsoft/copilot-sdk's callback-based session.on() API
  * and Archon's async-generator MessageChunk contract.
  *
  * Three concerns in this file:
@@ -13,7 +13,7 @@
  *     wrapper; lives here rather than in provider.ts so the queue/listener/
  *     cleanup lifecycle stays readable.
  *
- * Module-scope invariant: type-only imports from @github/copilot-sdk. Value
+ * Module-scope invariant: type-only imports from @microsoft/copilot-sdk. Value
  * imports go inside `provider.ts` via dynamic `await import(...)`. See the
  * PI lazy-load test for rationale.
  */
@@ -23,7 +23,7 @@ import type {
   CopilotSession,
   SessionEvent,
   ToolExecutionCompleteData,
-} from '@github/copilot-sdk';
+} from '@microsoft/copilot-sdk';
 
 import { sessionPreview, truncateToolOutput } from '@archon/provider-contract';
 

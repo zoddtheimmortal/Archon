@@ -8,11 +8,11 @@
  *  - session.error suppression when SDK delivers fallback assistant content
  *  - disconnect/stop cleanup errors don't mask the primary result/error
  *
- * Runs in its own bun test invocation — mocks @github/copilot-sdk and
+ * Runs in its own bun test invocation — mocks @microsoft/copilot-sdk and
  * @archon/paths process-wide.
  */
 import { beforeEach, describe, expect, mock, test } from 'bun:test';
-import type { SessionEvent } from '@github/copilot-sdk';
+import type { SessionEvent } from '@microsoft/copilot-sdk';
 
 import { createMockLogger } from '../../test/mocks/logger';
 
@@ -112,8 +112,13 @@ class FakeCopilotClient {
 
 const approveAllStub = mock(() => ({ kind: 'approved' }));
 
-mock.module('@github/copilot-sdk', () => ({
+const FakeRuntimeConnection = {
+  forSpawnedStdio: (opts: Record<string, unknown> = {}) => ({ kind: 'spawned-stdio', ...opts }),
+};
+
+mock.module('@microsoft/copilot-sdk', () => ({
   CopilotClient: FakeCopilotClient,
+  RuntimeConnection: FakeRuntimeConnection,
   approveAll: approveAllStub,
 }));
 

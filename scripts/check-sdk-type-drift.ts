@@ -9,7 +9,7 @@ const SDK_PACKAGES = [
   '@anthropic-ai/claude-agent-sdk',
   '@earendil-works/pi-ai',
   '@earendil-works/pi-coding-agent',
-  '@github/copilot-sdk',
+  '@microsoft/copilot-sdk',
   '@opencode-ai/sdk',
 ];
 

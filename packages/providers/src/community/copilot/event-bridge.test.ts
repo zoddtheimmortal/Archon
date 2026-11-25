@@ -5,7 +5,7 @@ mock.module('@archon/paths', () => ({
   createLogger: mock(() => createMockLogger()),
 }));
 
-import type { SessionEvent } from '@github/copilot-sdk';
+import type { SessionEvent } from '@microsoft/copilot-sdk';
 import { TOOL_OUTPUT_MAX_CHARS } from '@archon/provider-contract';
 
 import type { TokenUsage } from '../../types';

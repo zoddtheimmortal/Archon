@@ -1,4 +1,4 @@
-import type { CopilotClientOptions, SessionConfig } from '@github/copilot-sdk';
+import type { CopilotClientOptions, CreateSessionOptions } from '@microsoft/copilot-sdk';
 import {
   EFFORT_LADDER,
   clampEffort,
@@ -10,12 +10,12 @@ import { z } from 'zod';
 import { configStringSchema, parseConfigLenient, parseConfigSchema } from '../../shared/run-config';
 
 /**
- * The reasoning-depth rungs Copilot's SDK accepts, weakest → strongest.
+ * The reasoning-depth rungs Archon sends to Copilot, weakest → strongest.
  *
- * The SDK does not export `ReasoningEffort` from its barrel, but its public
- * `SessionConfig` retains the union.
+ * The SDK types `ReasoningEffort` as `string` because each model defines its
+ * own levels, so there is no SDK union to check this list against.
  */
-type CopilotEffort = NonNullable<SessionConfig['reasoningEffort']>;
+type CopilotEffort = NonNullable<NonNullable<CreateSessionOptions['inference']>['reasoningEffort']>;
 
 export const COPILOT_EFFORTS = [
   'low',
@@ -25,12 +25,8 @@ export const COPILOT_EFFORTS = [
   'max',
 ] as const satisfies readonly CopilotEffort[];
 
-export type CopilotEffortsAreComplete = AssertNever<
-  Exclude<CopilotEffort, (typeof COPILOT_EFFORTS)[number]>
->;
-
 /** Copilot CLI log levels, imported from the SDK's client options. */
-type CopilotLogLevel = NonNullable<CopilotClientOptions['logLevel']>;
+type CopilotLogLevel = NonNullable<NonNullable<CopilotClientOptions['observability']>['logLevel']>;
 
 const COPILOT_LOG_LEVELS = [
   'none',
@@ -95,7 +91,7 @@ export const configSchemas = {
   snapshot: snapshotConfigSchema(portableFields, localFields),
 };
 
-/** Community provider defaults for GitHub Copilot (@github/copilot-sdk). */
+/** Community provider defaults for GitHub Copilot (@microsoft/copilot-sdk). */
 export type CopilotProviderDefaults = z.output<typeof configSchemas.install>;
 
 /** Parse raw `assistants.copilot` config into typed defaults, dropping invalid values. */

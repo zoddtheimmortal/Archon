@@ -1,5 +1,5 @@
 /**
- * Regression test: @github/copilot-sdk must not load at module-import time.
+ * Regression test: @microsoft/copilot-sdk must not load at module-import time.
  *
  * The SDK spawns the Copilot CLI subprocess from `new CopilotClient()`, and
  * its module graph may evolve in ways that add filesystem reads at import.
@@ -20,7 +20,7 @@ import { expect, mock, test } from 'bun:test';
 
 let copilotSdkLoaded = false;
 
-mock.module('@github/copilot-sdk', () => {
+mock.module('@microsoft/copilot-sdk', () => {
   copilotSdkLoaded = true;
   return {};
 });
@@ -37,7 +37,7 @@ test('registering and instantiating the Copilot provider does not eagerly load t
   expect(provider.getCapabilities()).toBeDefined();
 
   // If this fails, someone reintroduced a static `import { ... } from
-  // '@github/copilot-sdk'` somewhere in the module chain reachable from
+  // '@microsoft/copilot-sdk'` somewhere in the module chain reachable from
   // `registerCommunityProviders()`. Fix by moving that value import inside
   // `CopilotProvider.sendQuery()` (or a helper it calls).
   expect(copilotSdkLoaded).toBe(false);

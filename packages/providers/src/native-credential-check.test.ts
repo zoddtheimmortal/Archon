@@ -25,7 +25,7 @@ mock.module('@anthropic-ai/claude-agent-sdk', () => ({
 const startRuntime = mock(() => {
   throw new Error('Native credential check must not start a runtime');
 });
-mock.module('@github/copilot-sdk', () => ({ CopilotClient: startRuntime }));
+mock.module('@microsoft/copilot-sdk', () => ({ CopilotClient: startRuntime }));
 mock.module('@opencode-ai/sdk', () => ({
   createOpencode: startRuntime,
   createOpencodeClient: startRuntime,

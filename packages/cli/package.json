@@ -25,7 +25,8 @@
     "dotenv": "^17.2.3",
     "@archon/plugin-manifest": "workspace:*",
     "@archon/chat-contract": "workspace:*",
-    "yaml": "^2.9.0"
+    "yaml": "^2.9.0",
+    "zod": "~4.4.3"
   },
   "devDependencies": {
     "@types/node": "^22.0.0"

@@ -21,7 +21,7 @@ test('resolves installed SDK exports, including re-exports and public subpaths',
   expect(sdkTypes.get('SDKMessage')).toContain('@anthropic-ai/claude-agent-sdk');
   expect(sdkTypes.get('OAuthAuthInfo')).toContain('@earendil-works/pi-ai');
   expect(sdkTypes.get('AgentSessionEvent')).toContain('@earendil-works/pi-coding-agent');
-  expect(sdkTypes.get('SessionEvent')).toContain('@github/copilot-sdk');
+  expect(sdkTypes.get('SessionEvent')).toContain('@microsoft/copilot-sdk');
   expect(sdkTypes.get('OpencodeClient')).toContain('@opencode-ai/sdk');
   expect(sdkTypes.has('query')).toBe(false);
 });
